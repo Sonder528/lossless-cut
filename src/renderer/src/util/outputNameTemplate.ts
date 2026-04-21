@@ -9,11 +9,10 @@ import type { FileNameTemplateContext } from '../../../common/userTypes.ts';
 import { isMac, isWindows, hasDuplicates, filenamify, getOutFileExtension } from '../util';
 import isDev from '../isDev';
 import { getSegmentTags, formatSegNum, getGuaranteedSegments } from '../segments';
-import type { FileStats, FormatTimecode, SegmentToExport } from '../types';
+import type { FileNameProblem, DetailedFileNameProblems, FileStats, FormatTimecode, SegmentToExport } from '../types';
 import safeishEval from '../worker/eval';
 import { UserFacingError } from '../../errors';
 import type { FileFfprobeMeta } from '../ffmpeg';
-
 
 export const segNumVariable = 'SEG_NUM';
 export const segNumIntVariable = 'SEG_NUM_INT';
@@ -129,6 +128,173 @@ function getTemplateProblems({ fileNames, filePath, outputDir, safeOutputFileNam
 
   return {
     error,
+    sameAsInputFileNameWarning,
+  };
+}
+
+function getInvalidCharsForFileName(safeOutputFileName: boolean): Set<string> {
+  const invalidChars = new Set<string>();
+
+  if (isWindows) {
+    ['<', '>', ':', '"', '|', '?', '*'].forEach((char) => invalidChars.add(char));
+  } else if (isMac) {
+    [':'].forEach((char) => invalidChars.add(char));
+  }
+
+  if (safeOutputFileName) {
+    if (isWindows) {
+      invalidChars.add('/');
+      invalidChars.add('\\');
+    } else {
+      invalidChars.add(pathSep);
+    }
+  }
+
+  return invalidChars;
+}
+
+function checkSingleFileName({
+  fileName,
+  segmentIndex,
+  filePath,
+  outputDir,
+  safeOutputFileName,
+  invalidChars,
+}: {
+  fileName: string;
+  segmentIndex: number;
+  filePath: string;
+  outputDir: string;
+  safeOutputFileName: boolean;
+  invalidChars: Set<string>;
+}): FileNameProblem | undefined {
+  const inPathNormalized = pathNormalize(filePath);
+  const outPathNormalized = pathNormalize(pathJoin(outputDir, fileName));
+  const sameAsInputPath = outPathNormalized === inPathNormalized;
+  const windowsMaxPathLength = 259;
+  const shouldCheckPathLength = isWindows || isDev;
+  const shouldCheckFileEnd = isWindows || isDev;
+
+  if (fileName.length === 0) {
+    return {
+      segmentIndex,
+      type: 'empty',
+      fileName,
+      message: i18n.t('File name is empty'),
+    };
+  }
+
+  const matchingInvalidChars = new Set([...fileName].filter((char) => invalidChars.has(char)));
+  if (matchingInvalidChars.size > 0) {
+    return {
+      segmentIndex,
+      type: 'invalid_chars',
+      fileName,
+      message: i18n.t('File name contains invalid character(s): {{invalidChars}}', { invalidChars: `"${[...matchingInvalidChars].join('", "')}"` }),
+      invalidChars: [...matchingInvalidChars],
+    };
+  }
+
+  if (sameAsInputPath) {
+    return {
+      segmentIndex,
+      type: 'same_as_input',
+      fileName,
+      message: i18n.t('File name is the same as the input path'),
+    };
+  }
+
+  if (shouldCheckFileEnd && /[\s.]$/.test(fileName)) {
+    return {
+      segmentIndex,
+      type: 'ends_with_space_or_dot',
+      fileName,
+      message: i18n.t('File name ends with a whitespace character or a dot, which is not allowed.'),
+    };
+  }
+
+  if (shouldCheckPathLength && outPathNormalized.length >= windowsMaxPathLength) {
+    return {
+      segmentIndex,
+      type: 'path_too_long',
+      fileName,
+      message: i18n.t('File will have a too long path'),
+    };
+  }
+
+  return undefined;
+}
+
+export function getDetailedTemplateProblems({
+  fileNames,
+  filePath,
+  outputDir,
+  safeOutputFileName,
+}: {
+  fileNames: string[];
+  filePath: string;
+  outputDir: string;
+  safeOutputFileName: boolean;
+}): DetailedFileNameProblems {
+  const problems: FileNameProblem[] = [];
+  let sameAsInputFileNameWarning = false;
+
+  const invalidChars = getInvalidCharsForFileName(safeOutputFileName);
+
+  for (let i = 0; i < fileNames.length; i += 1) {
+    const fileName = fileNames[i]!;
+
+    if (basename(filePath) === fileName) {
+      sameAsInputFileNameWarning = true;
+    }
+
+    const problem = checkSingleFileName({
+      fileName,
+      segmentIndex: i,
+      filePath,
+      outputDir,
+      safeOutputFileName,
+      invalidChars,
+    });
+
+    if (problem) {
+      problems.push(problem);
+    }
+  }
+
+  if (fileNames.length > 1) {
+    const fileNameToIndices = new Map<string, number[]>();
+    fileNames.forEach((fileName, index) => {
+      const existing = fileNameToIndices.get(fileName) ?? [];
+      existing.push(index);
+      fileNameToIndices.set(fileName, existing);
+    });
+
+    for (const [fileName, indices] of fileNameToIndices.entries()) {
+      if (indices.length > 1) {
+        const existingProblem = problems.find((p) => p.segmentIndex === indices[0] && p.type === 'duplicate');
+        if (existingProblem) continue;
+
+        const hasOtherProblem = problems.some((p) => indices.includes(p.segmentIndex));
+        if (hasOtherProblem) continue;
+
+        for (const index of indices) {
+          const otherIndices = indices.filter((i) => i !== index);
+          problems.push({
+            segmentIndex: index,
+            type: 'duplicate',
+            fileName,
+            message: i18n.t('Duplicate file name with segment(s): {{segmentNumbers}}', { segmentNumbers: otherIndices.map((i) => i + 1).join(', ') }),
+            duplicateWith: otherIndices,
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    hasProblems: problems.length > 0,
+    problems: problems.sort((a, b) => a.segmentIndex - b.segmentIndex),
     sameAsInputFileNameWarning,
   };
 }

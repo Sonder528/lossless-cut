@@ -179,3 +179,27 @@ export interface BatchFile {
 }
 
 export type KeyboardLayoutMap = Map<string, string>;
+
+export type FileNameProblemType = 'empty' | 'invalid_chars' | 'duplicate' | 'same_as_input' | 'ends_with_space_or_dot' | 'path_too_long';
+
+export interface FileNameProblem {
+  segmentIndex: number;
+  type: FileNameProblemType;
+  fileName: string;
+  message: string;
+  invalidChars?: string[];
+  duplicateWith?: number[];
+}
+
+export interface DetailedFileNameProblems {
+  hasProblems: boolean;
+  problems: FileNameProblem[];
+  sameAsInputFileNameWarning: boolean;
+}
+
+export interface CheckFileNamesResult {
+  fileNames: string[];
+  originalFileNames?: string[];
+  detailedProblems: DetailedFileNameProblems;
+  legacyError: string | undefined;
+}
