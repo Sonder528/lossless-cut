@@ -872,6 +872,7 @@
   "Zoom in timeline": "Zoom in timeline",
   "Zoom in/out timeline": "Zoom in/out timeline",
   "Zoom out timeline": "Zoom out timeline",
+<<<<<<< Updated upstream
   "File name is empty": "File name is empty",
   "File name contains invalid character(s): {{invalidChars}}": "File name contains invalid character(s): {{invalidChars}}",
   "File name is the same as the input path": "File name is the same as the input path",
@@ -890,6 +891,8 @@
   "Locate": "Locate",
   "Jump to segment": "Jump to segment",
   "Continue anyway": "Continue anyway",
+=======
+>>>>>>> Stashed changes
   "Empty file name": "Empty file name",
   "Invalid characters": "Invalid characters",
   "Duplicate file name": "Duplicate file name",
@@ -899,5 +902,24 @@
   "Unknown problem": "Unknown problem",
   "Segment": "Segment",
   "Invalid characters found:": "Invalid characters found:",
+<<<<<<< Updated upstream
   "Duplicates with segment(s):": "Duplicates with segment(s):"
+=======
+  "Duplicates with segment(s):": "Duplicates with segment(s):",
+  "Jump to segment": "Jump to segment",
+  "Locate": "Locate",
+  "File name problems detected": "File name problems detected",
+  "{{count}} problem(s) found with the output file names": "{{count}} problem(s) found with the output file names",
+  "{{count}} empty": "{{count}} empty",
+  "{{count}} with invalid chars": "{{count}} with invalid chars",
+  "{{count}} duplicates": "{{count}} duplicates",
+  "{{count}} with invalid ending": "{{count}} with invalid ending",
+  "{{count}} with long path": "{{count}} with long path",
+  "{{count}} same as input": "{{count}} same as input",
+  "Please fix these issues before exporting. Click \"Locate\" to jump to the corresponding segment.": "Please fix these issues before exporting. Click \"Locate\" to jump to the corresponding segment.",
+  "Continue anyway": "Continue anyway",
+  "File name is empty": "File name is empty",
+  "File name contains invalid character(s): {{invalidChars}}": "File name contains invalid character(s): {{invalidChars}}",
+  "Duplicate file name with segment(s): {{segmentNumbers}}": "Duplicate file name with segment(s): {{segmentNumbers}}"
+>>>>>>> Stashed changes
 }
