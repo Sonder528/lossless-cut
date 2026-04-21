@@ -45,114 +45,130 @@ vi.mock('node:path', () => ({
   basename: mockBasename,
 }));
 
-describe('outputNameTemplate', () => {
+describe('getDetailedTemplateProblems', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockBasename.mockImplementation((path: string) => {
+      const parts = path.split(/[/\\]/);
+      return parts[parts.length - 1] || '';
+    });
+    mockNormalize.mockImplementation((path: string) => path);
+    mockJoin.mockImplementation((...paths: string[]) => paths.join('\\'));
   });
 
-  describe('getDetailedTemplateProblems', () => {
+  test('should detect empty file names', async () => {
     const { getDetailedTemplateProblems } = await import('./outputNameTemplate');
 
-    test('should detect empty file names', () => {
-      const result = getDetailedTemplateProblems({
-        fileNames: ['valid.mp4', '', 'another.mp4'],
-        filePath: 'C:\\test\\input.mp4',
-        outputDir: 'C:\\test\\output',
-        safeOutputFileName: true,
-      });
-
-      expect(result.hasProblems).toBe(true);
-      expect(result.problems.length).toBe(1);
-      expect(result.problems[0].type).toBe('empty' as FileNameProblemType);
-      expect(result.problems[0].segmentIndex).toBe(1);
+    const result = getDetailedTemplateProblems({
+      fileNames: ['valid.mp4', '', 'another.mp4'],
+      filePath: 'C:\\test\\input.mp4',
+      outputDir: 'C:\\test\\output',
+      safeOutputFileName: true,
     });
 
-    test('should detect duplicate file names', () => {
-      const result = getDetailedTemplateProblems({
-        fileNames: ['segment1.mp4', 'segment2.mp4', 'segment1.mp4'],
-        filePath: 'C:\\test\\input.mp4',
-        outputDir: 'C:\\test\\output',
-        safeOutputFileName: true,
-      });
+    expect(result.hasProblems).toBe(true);
+    expect(result.problems.length).toBe(1);
+    expect(result.problems[0].type).toBe('empty' as FileNameProblemType);
+    expect(result.problems[0].segmentIndex).toBe(1);
+  });
 
-      expect(result.hasProblems).toBe(true);
-      expect(result.problems.length).toBe(2);
-      expect(result.problems[0].type).toBe('duplicate' as FileNameProblemType);
-      expect(result.problems[1].type).toBe('duplicate' as FileNameProblemType);
-      expect(result.problems[0].segmentIndex).toBe(0);
-      expect(result.problems[1].segmentIndex).toBe(2);
+  test('should detect duplicate file names', async () => {
+    const { getDetailedTemplateProblems } = await import('./outputNameTemplate');
+
+    const result = getDetailedTemplateProblems({
+      fileNames: ['segment1.mp4', 'segment2.mp4', 'segment1.mp4'],
+      filePath: 'C:\\test\\input.mp4',
+      outputDir: 'C:\\test\\output',
+      safeOutputFileName: true,
     });
 
-    test('should detect invalid characters in file names', () => {
-      mockBasename.mockReturnValue('input.mp4');
-      mockNormalize.mockImplementation((path: string) => path);
+    expect(result.hasProblems).toBe(true);
+    expect(result.problems.length).toBe(2);
+    expect(result.problems[0].type).toBe('duplicate' as FileNameProblemType);
+    expect(result.problems[1].type).toBe('duplicate' as FileNameProblemType);
+    expect(result.problems[0].segmentIndex).toBe(0);
+    expect(result.problems[1].segmentIndex).toBe(2);
+  });
 
-      const result = getDetailedTemplateProblems({
-        fileNames: ['valid.mp4', 'file:name.mp4', 'another.mp4'],
-        filePath: 'C:\\test\\input.mp4',
-        outputDir: 'C:\\test\\output',
-        safeOutputFileName: true,
-      });
+  test('should detect invalid characters in file names', async () => {
+    const { getDetailedTemplateProblems } = await import('./outputNameTemplate');
 
-      expect(result.hasProblems).toBe(true);
-      expect(result.problems.length).toBeGreaterThan(0);
-      expect(result.problems.some(p => p.type === 'invalid_chars')).toBe(true);
+    mockBasename.mockReturnValue('input.mp4');
+    mockNormalize.mockImplementation((path: string) => path);
+
+    const result = getDetailedTemplateProblems({
+      fileNames: ['valid.mp4', 'file:name.mp4', 'another.mp4'],
+      filePath: 'C:\\test\\input.mp4',
+      outputDir: 'C:\\test\\output',
+      safeOutputFileName: true,
     });
 
-    test('should return no problems for valid file names', () => {
-      mockBasename.mockReturnValue('input.mp4');
+    expect(result.hasProblems).toBe(true);
+    expect(result.problems.length).toBeGreaterThan(0);
+    expect(result.problems.some(p => p.type === 'invalid_chars')).toBe(true);
+  });
 
-      const result = getDetailedTemplateProblems({
-        fileNames: ['segment1.mp4', 'segment2.mp4', 'segment3.mp4'],
-        filePath: 'C:\\test\\input.mp4',
-        outputDir: 'C:\\test\\output',
-        safeOutputFileName: true,
-      });
+  test('should return no problems for valid file names', async () => {
+    const { getDetailedTemplateProblems } = await import('./outputNameTemplate');
 
-      expect(result.hasProblems).toBe(false);
-      expect(result.problems.length).toBe(0);
+    mockBasename.mockReturnValue('input.mp4');
+
+    const result = getDetailedTemplateProblems({
+      fileNames: ['segment1.mp4', 'segment2.mp4', 'segment3.mp4'],
+      filePath: 'C:\\test\\input.mp4',
+      outputDir: 'C:\\test\\output',
+      safeOutputFileName: true,
     });
 
-    test('should detect file name ending with space', () => {
-      mockBasename.mockReturnValue('input.mp4');
+    expect(result.hasProblems).toBe(false);
+    expect(result.problems.length).toBe(0);
+  });
 
-      const result = getDetailedTemplateProblems({
-        fileNames: ['valid.mp4', 'file name .mp4'],
-        filePath: 'C:\\test\\input.mp4',
-        outputDir: 'C:\\test\\output',
-        safeOutputFileName: true,
-      });
+  test('should detect file name ending with space', async () => {
+    const { getDetailedTemplateProblems } = await import('./outputNameTemplate');
 
-      expect(result.hasProblems).toBe(true);
-      expect(result.problems.some(p => p.type === 'ends_with_space_or_dot')).toBe(true);
+    mockBasename.mockReturnValue('input.mp4');
+
+    const result = getDetailedTemplateProblems({
+      fileNames: ['valid.mp4', 'file name .mp4'],
+      filePath: 'C:\\test\\input.mp4',
+      outputDir: 'C:\\test\\output',
+      safeOutputFileName: true,
     });
 
-    test('should detect file name ending with dot', () => {
-      mockBasename.mockReturnValue('input.mp4');
+    expect(result.hasProblems).toBe(true);
+    expect(result.problems.some(p => p.type === 'ends_with_space_or_dot')).toBe(true);
+  });
 
-      const result = getDetailedTemplateProblems({
-        fileNames: ['valid.mp4', 'file name.'],
-        filePath: 'C:\\test\\input.mp4',
-        outputDir: 'C:\\test\\output',
-        safeOutputFileName: true,
-      });
+  test('should detect file name ending with dot', async () => {
+    const { getDetailedTemplateProblems } = await import('./outputNameTemplate');
 
-      expect(result.hasProblems).toBe(true);
-      expect(result.problems.some(p => p.type === 'ends_with_space_or_dot')).toBe(true);
+    mockBasename.mockReturnValue('input.mp4');
+
+    const result = getDetailedTemplateProblems({
+      fileNames: ['valid.mp4', 'file name.'],
+      filePath: 'C:\\test\\input.mp4',
+      outputDir: 'C:\\test\\output',
+      safeOutputFileName: true,
     });
 
-    test('should sort problems by segment index', () => {
-      const result = getDetailedTemplateProblems({
-        fileNames: ['', 'valid.mp4', 'duplicate.mp4', 'duplicate.mp4', ''],
-        filePath: 'C:\\test\\input.mp4',
-        outputDir: 'C:\\test\\output',
-        safeOutputFileName: true,
-      });
+    expect(result.hasProblems).toBe(true);
+    expect(result.problems.some(p => p.type === 'ends_with_space_or_dot')).toBe(true);
+  });
 
-      expect(result.hasProblems).toBe(true);
-      const segmentIndices = result.problems.map(p => p.segmentIndex);
-      const sortedIndices = [...segmentIndices].sort((a, b) => a - b);
-      expect(segmentIndices).toEqual(sortedIndices);
+  test('should sort problems by segment index', async () => {
+    const { getDetailedTemplateProblems } = await import('./outputNameTemplate');
+
+    const result = getDetailedTemplateProblems({
+      fileNames: ['', 'valid.mp4', 'duplicate.mp4', 'duplicate.mp4', ''],
+      filePath: 'C:\\test\\input.mp4',
+      outputDir: 'C:\\test\\output',
+      safeOutputFileName: true,
     });
+
+    expect(result.hasProblems).toBe(true);
+    const segmentIndices = result.problems.map(p => p.segmentIndex);
+    const sortedIndices = [...segmentIndices].sort((a, b) => a - b);
+    expect(segmentIndices).toEqual(sortedIndices);
   });
 });

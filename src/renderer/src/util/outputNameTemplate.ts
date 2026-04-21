@@ -9,11 +9,7 @@ import type { FileNameTemplateContext } from '../../../common/userTypes.ts';
 import { isMac, isWindows, hasDuplicates, filenamify, getOutFileExtension } from '../util';
 import isDev from '../isDev';
 import { getSegmentTags, formatSegNum, getGuaranteedSegments } from '../segments';
-<<<<<<< Updated upstream
-import type { FileNameProblem, DetailedFileNameProblems, FileStats, FormatTimecode, SegmentToExport } from '../types';
-=======
 import type { FileStats, FormatTimecode, SegmentToExport, FileNameProblem, DetailedFileNameProblems, FileNameProblemType } from '../types';
->>>>>>> Stashed changes
 import safeishEval from '../worker/eval';
 import { UserFacingError } from '../../errors';
 import type { FileFfprobeMeta } from '../ffmpeg';
@@ -182,11 +178,7 @@ function checkSingleFileName({
   if (fileName.length === 0) {
     return {
       segmentIndex,
-<<<<<<< Updated upstream
-      type: 'empty',
-=======
       type: 'empty' as FileNameProblemType,
->>>>>>> Stashed changes
       fileName,
       message: i18n.t('File name is empty'),
     };
@@ -196,11 +188,7 @@ function checkSingleFileName({
   if (matchingInvalidChars.size > 0) {
     return {
       segmentIndex,
-<<<<<<< Updated upstream
-      type: 'invalid_chars',
-=======
       type: 'invalid_chars' as FileNameProblemType,
->>>>>>> Stashed changes
       fileName,
       message: i18n.t('File name contains invalid character(s): {{invalidChars}}', { invalidChars: `"${[...matchingInvalidChars].join('", "')}"` }),
       invalidChars: [...matchingInvalidChars],
@@ -210,11 +198,7 @@ function checkSingleFileName({
   if (sameAsInputPath) {
     return {
       segmentIndex,
-<<<<<<< Updated upstream
-      type: 'same_as_input',
-=======
       type: 'same_as_input' as FileNameProblemType,
->>>>>>> Stashed changes
       fileName,
       message: i18n.t('File name is the same as the input path'),
     };
@@ -223,11 +207,7 @@ function checkSingleFileName({
   if (shouldCheckFileEnd && /[\s.]$/.test(fileName)) {
     return {
       segmentIndex,
-<<<<<<< Updated upstream
-      type: 'ends_with_space_or_dot',
-=======
       type: 'ends_with_space_or_dot' as FileNameProblemType,
->>>>>>> Stashed changes
       fileName,
       message: i18n.t('File name ends with a whitespace character or a dot, which is not allowed.'),
     };
@@ -236,11 +216,7 @@ function checkSingleFileName({
   if (shouldCheckPathLength && outPathNormalized.length >= windowsMaxPathLength) {
     return {
       segmentIndex,
-<<<<<<< Updated upstream
-      type: 'path_too_long',
-=======
       type: 'path_too_long' as FileNameProblemType,
->>>>>>> Stashed changes
       fileName,
       message: i18n.t('File will have a too long path'),
     };
@@ -306,11 +282,7 @@ export function getDetailedTemplateProblems({
           const otherIndices = indices.filter((i) => i !== index);
           problems.push({
             segmentIndex: index,
-<<<<<<< Updated upstream
-            type: 'duplicate',
-=======
             type: 'duplicate' as FileNameProblemType,
->>>>>>> Stashed changes
             fileName,
             message: i18n.t('Duplicate file name with segment(s): {{segmentNumbers}}', { segmentNumbers: otherIndices.map((i) => i + 1).join(', ') }),
             duplicateWith: otherIndices,
