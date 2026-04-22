@@ -165,52 +165,23 @@ function ExportConfirm({
   const [showAdvanced, setShowAdvanced] = useState(!simpleMode);
   const [fileNameProblems, setFileNameProblems] = useState<DetailedFileNameProblems | undefined>();
   const [showFileNameProblemsDialog, setShowFileNameProblemsDialog] = useState(false);
-<<<<<<< Updated upstream
-
-  const handleCheckFileNameProblems = useCallback(async () => {
-    if (filePath == null || outputDir == null) {
-      return false;
-    }
-
-    let generated;
-    if (willMerge && autoDeleteMergedSegments) {
-      generated = await generateCutFileNames(defaultCutFileTemplate);
-    } else {
-      generated = await generateCutFileNames(cutFileTemplate);
-    }
-
-    const problems = getDetailedTemplateProblems({
-      fileNames: generated.fileNames,
-      filePath,
-      outputDir,
-      safeOutputFileName,
-    });
-
-    if (problems.hasProblems) {
-      setFileNameProblems(problems);
-      setShowFileNameProblemsDialog(true);
-      return true;
-    }
-
-    return false;
-  }, [filePath, outputDir, willMerge, autoDeleteMergedSegments, generateCutFileNames, defaultCutFileTemplate, cutFileTemplate, safeOutputFileName]);
-
-  const handleExportConfirm = useCallback(async () => {
-    const hasProblems = await handleCheckFileNameProblems();
-    if (!hasProblems) {
-=======
   const [isCheckingProblems, setIsCheckingProblems] = useState(false);
 
   const handleCheckFileNameProblems = useCallback(async () => {
-    if (outputDir == null || filePath == null) {
+    if (filePath == null || outputDir == null) {
       return undefined;
     }
 
     setIsCheckingProblems(true);
     try {
-      const generated = willMerge
-        ? await generateCutMergedFileNames(cutMergedFileTemplate)
-        : await generateCutFileNames(cutFileTemplate);
+      let generated;
+      if (willMerge && autoDeleteMergedSegments) {
+        generated = await generateCutFileNames(defaultCutFileTemplate);
+      } else if (willMerge) {
+        generated = await generateCutMergedFileNames(cutMergedFileTemplate);
+      } else {
+        generated = await generateCutFileNames(cutFileTemplate);
+      }
 
       const problems = getDetailedTemplateProblems({
         fileNames: generated.fileNames,
@@ -226,7 +197,7 @@ function ExportConfirm({
     } finally {
       setIsCheckingProblems(false);
     }
-  }, [willMerge, generateCutMergedFileNames, generateCutFileNames, cutMergedFileTemplate, cutFileTemplate, filePath, outputDir, safeOutputFileName]);
+  }, [filePath, outputDir, willMerge, autoDeleteMergedSegments, generateCutFileNames, defaultCutFileTemplate, generateCutMergedFileNames, cutMergedFileTemplate, cutFileTemplate, safeOutputFileName]);
 
   const handleExportConfirm = useCallback(async () => {
     const problems = await handleCheckFileNameProblems();
@@ -235,7 +206,6 @@ function ExportConfirm({
       setFileNameProblems(problems);
       setShowFileNameProblemsDialog(true);
     } else {
->>>>>>> Stashed changes
       onExportConfirm();
     }
   }, [handleCheckFileNameProblems, onExportConfirm]);
@@ -427,8 +397,7 @@ function ExportConfirm({
         title={t('Export options')}
         onClosePress={onClosePress}
         renderButton={() => (
-<<<<<<< Updated upstream
-          <ExportButton segmentsToExport={segmentsToExport} areWeCutting={areWeCutting} onClick={withBlur(() => handleExportConfirm())} style={{ fontSize: '1.3em' }} />
+          <ExportButton segmentsToExport={segmentsToExport} areWeCutting={areWeCutting} onClick={withBlur(handleExportConfirm)} style={{ fontSize: '1.3em' }} disabled={isCheckingProblems} />
         )}
         renderBottom={() => (
           <>
@@ -442,22 +411,6 @@ function ExportConfirm({
           </>
         )}
       >
-=======
-          <ExportButton segmentsToExport={segmentsToExport} areWeCutting={areWeCutting} onClick={withBlur(handleExportConfirm)} style={{ fontSize: '1.3em' }} disabled={isCheckingProblems} />
-        )}
-      renderBottom={() => (
-        <>
-          <ToggleExportConfirm size="1.5em" />
-          <div style={{ fontSize: '.8em', marginLeft: '.4em', marginRight: '.5em', maxWidth: '8.5em', lineHeight: '100%', color: exportConfirmEnabled ? 'var(--gray-12)' : 'var(--gray-11)', cursor: 'pointer' }} role="button" onClick={toggleExportConfirmEnabled}>
-            {t('Show this page before exporting?')}
-          </div>
-          {notices.totalNum > 0 && (
-            renderNoticeIcon({ warning: true }, { fontSize: '1.5em', marginRight: '.5em' })
-          )}
-        </>
-      )}
-    >
->>>>>>> Stashed changes
       <table className={styles['options']}>
         <tbody>
           <tr>
@@ -809,10 +762,7 @@ function ExportConfirm({
         </tbody>
       </table>
     </ExportSheet>
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
       <FileNameProblemsDialog
         open={showFileNameProblemsDialog}
         onOpenChange={setShowFileNameProblemsDialog}
@@ -820,11 +770,7 @@ function ExportConfirm({
         onJumpToSegment={handleJumpToSegment}
         onContinue={handleContinueAnyway}
         onCancel={handleCancelProblems}
-<<<<<<< Updated upstream
-        allowContinue
-=======
         allowContinue={false}
->>>>>>> Stashed changes
       />
     </>
   );
