@@ -12,6 +12,7 @@ import FileNameTemplateEditor from './FileNameTemplateEditor';
 import HighlightedText from './HighlightedText';
 import Select from './Select';
 import Switch from './Switch';
+import FileNameProblemsDialog from './FileNameProblemsDialog';
 
 import { primaryTextColor, warningColor } from '../colors';
 import { withBlur } from '../util';
@@ -19,9 +20,9 @@ import getSwal from '../swal';
 import { isMov as ffmpegIsMov } from '../util/streams';
 import useUserSettings from '../hooks/useUserSettings';
 import styles from './ExportConfirm.module.css';
-import type { SegmentToExport } from '../types';
+import type { SegmentToExport, DetailedFileNameProblems } from '../types';
 import type { GenerateOutFileNames } from '../util/outputNameTemplate';
-import { defaultCutFileTemplate, defaultCutMergedFileTemplate } from '../util/outputNameTemplate';
+import { defaultCutFileTemplate, defaultCutMergedFileTemplate, getDetailedTemplateProblems } from '../util/outputNameTemplate';
 import type { FFprobeStream } from '../../../common/ffprobe';
 import type { AvoidNegativeTs, PreserveMetadata } from '../../../common/types';
 import TextInput from './TextInput';
@@ -121,6 +122,9 @@ function ExportConfirm({
   lossyMode,
   neighbouringKeyFrames,
   findNearestKeyFrameTime,
+  filePath,
+  safeOutputFileName,
+  onJumpToSegment,
 } : {
   areWeCutting: boolean,
   segmentsToExport: SegmentToExport[],
@@ -150,12 +154,66 @@ function ExportConfirm({
   lossyMode: LossyMode | undefined,
   neighbouringKeyFrames: Frame[],
   findNearestKeyFrameTime: FindNearestKeyframeTime,
+  filePath: string | undefined,
+  safeOutputFileName: boolean,
+  onJumpToSegment?: (segmentIndex: number) => void,
 }) {
   const { t } = useTranslation();
 
   const { keyframeCut, toggleKeyframeCut, preserveMovData, setPreserveMovData, preserveMetadata, setPreserveMetadata, preserveChapters, setPreserveChapters, movFastStart, setMovFastStart, avoidNegativeTs, setAvoidNegativeTs, autoDeleteMergedSegments, exportConfirmEnabled, toggleExportConfirmEnabled, segmentsToChapters, setSegmentsToChapters, preserveMetadataOnMerge, setPreserveMetadataOnMerge, enableSmartCut, setEnableSmartCut, effectiveExportMode, enableOverwriteOutput, setEnableOverwriteOutput, ffmpegExperimental, setFfmpegExperimental, cutFromAdjustmentFrames, setCutFromAdjustmentFrames, cutToAdjustmentFrames, setCutToAdjustmentFrames, setCutFileTemplate, setCutMergedFileTemplate, simpleMode, keyframesEnabled } = useUserSettings();
 
   const [showAdvanced, setShowAdvanced] = useState(!simpleMode);
+  const [fileNameProblems, setFileNameProblems] = useState<DetailedFileNameProblems | undefined>();
+  const [showFileNameProblemsDialog, setShowFileNameProblemsDialog] = useState(false);
+
+  const handleCheckFileNameProblems = useCallback(async () => {
+    if (filePath == null || outputDir == null) {
+      return false;
+    }
+
+    let generated;
+    if (willMerge && autoDeleteMergedSegments) {
+      generated = await generateCutFileNames(defaultCutFileTemplate);
+    } else {
+      generated = await generateCutFileNames(cutFileTemplate);
+    }
+
+    const problems = getDetailedTemplateProblems({
+      fileNames: generated.fileNames,
+      filePath,
+      outputDir,
+      safeOutputFileName,
+    });
+
+    if (problems.hasProblems) {
+      setFileNameProblems(problems);
+      setShowFileNameProblemsDialog(true);
+      return true;
+    }
+
+    return false;
+  }, [filePath, outputDir, willMerge, autoDeleteMergedSegments, generateCutFileNames, defaultCutFileTemplate, cutFileTemplate, safeOutputFileName]);
+
+  const handleExportConfirm = useCallback(async () => {
+    const hasProblems = await handleCheckFileNameProblems();
+    if (!hasProblems) {
+      onExportConfirm();
+    }
+  }, [handleCheckFileNameProblems, onExportConfirm]);
+
+  const handleContinueAnyway = useCallback(() => {
+    setShowFileNameProblemsDialog(false);
+    onExportConfirm();
+  }, [onExportConfirm]);
+
+  const handleCancelProblems = useCallback(() => {
+    setShowFileNameProblemsDialog(false);
+  }, []);
+
+  const handleJumpToSegment = useCallback((segmentIndex: number) => {
+    setShowFileNameProblemsDialog(false);
+    onJumpToSegment?.(segmentIndex);
+  }, [onJumpToSegment]);
 
   const togglePreserveChapters = useCallback(() => setPreserveChapters((val) => !val), [setPreserveChapters]);
   const togglePreserveMovData = useCallback(() => setPreserveMovData((val) => !val), [setPreserveMovData]);
@@ -323,26 +381,27 @@ function ExportConfirm({
   }, [setEncBitrate]);
 
   return (
-    <ExportSheet
-      width="50em"
-      visible={visible}
-      title={t('Export options')}
-      onClosePress={onClosePress}
-      renderButton={() => (
-        <ExportButton segmentsToExport={segmentsToExport} areWeCutting={areWeCutting} onClick={withBlur(() => onExportConfirm())} style={{ fontSize: '1.3em' }} />
-      )}
-      renderBottom={() => (
-        <>
-          <ToggleExportConfirm size="1.5em" />
-          <div style={{ fontSize: '.8em', marginLeft: '.4em', marginRight: '.5em', maxWidth: '8.5em', lineHeight: '100%', color: exportConfirmEnabled ? 'var(--gray-12)' : 'var(--gray-11)', cursor: 'pointer' }} role="button" onClick={toggleExportConfirmEnabled}>
-            {t('Show this page before exporting?')}
-          </div>
-          {notices.totalNum > 0 && (
-            renderNoticeIcon({ warning: true }, { fontSize: '1.5em', marginRight: '.5em' })
-          )}
-        </>
-      )}
-    >
+    <>
+      <ExportSheet
+        width="50em"
+        visible={visible}
+        title={t('Export options')}
+        onClosePress={onClosePress}
+        renderButton={() => (
+          <ExportButton segmentsToExport={segmentsToExport} areWeCutting={areWeCutting} onClick={withBlur(() => handleExportConfirm())} style={{ fontSize: '1.3em' }} />
+        )}
+        renderBottom={() => (
+          <>
+            <ToggleExportConfirm size="1.5em" />
+            <div style={{ fontSize: '.8em', marginLeft: '.4em', marginRight: '.5em', maxWidth: '8.5em', lineHeight: '100%', color: exportConfirmEnabled ? 'var(--gray-12)' : 'var(--gray-11)', cursor: 'pointer' }} role="button" onClick={toggleExportConfirmEnabled}>
+              {t('Show this page before exporting?')}
+            </div>
+            {notices.totalNum > 0 && (
+              renderNoticeIcon({ warning: true }, { fontSize: '1.5em', marginRight: '.5em' })
+            )}
+          </>
+        )}
+      >
       <table className={styles['options']}>
         <tbody>
           <tr>
@@ -694,6 +753,16 @@ function ExportConfirm({
         </tbody>
       </table>
     </ExportSheet>
+      <FileNameProblemsDialog
+        open={showFileNameProblemsDialog}
+        onOpenChange={setShowFileNameProblemsDialog}
+        detailedProblems={fileNameProblems}
+        onJumpToSegment={handleJumpToSegment}
+        onContinue={handleContinueAnyway}
+        onCancel={handleCancelProblems}
+        allowContinue
+      />
+    </>
   );
 }
 
