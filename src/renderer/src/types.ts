@@ -196,7 +196,6 @@ export interface DetailedFileNameProblems {
   problems: FileNameProblem[];
   sameAsInputFileNameWarning: boolean;
 }
-<<<<<<< Updated upstream
 
 export interface CheckFileNamesResult {
   fileNames: string[];
@@ -204,5 +203,3 @@ export interface CheckFileNamesResult {
   detailedProblems: DetailedFileNameProblems;
   legacyError: string | undefined;
 }
-=======
->>>>>>> Stashed changes
