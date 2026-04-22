@@ -2,58 +2,66 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 
 import type { FileNameProblemType } from '../types';
 
+const mockPath = {
+  parse: vi.fn(),
+  sep: '\\',
+  join: vi.fn((...paths: string[]) => paths.join('\\')),
+  normalize: vi.fn((path: string) => path),
+  basename: vi.fn((path: string) => {
+    const parts = path.split(/[/\\]/);
+    return parts[parts.length - 1] || '';
+  }),
+};
+
+const mockI18n = {
+  t: (key: string, options?: Record<string, unknown>) => {
+    if (key === 'File name is empty') return 'File name is empty';
+    if (key === 'File name contains invalid character(s): {{invalidChars}}') {
+      return `File name contains invalid character(s): ${options?.invalidChars}`;
+    }
+    if (key === 'Duplicate file name with segment(s): {{segmentNumbers}}') {
+      return `Duplicate file name with segment(s): ${options?.segmentNumbers}`;
+    }
+    if (key === 'File name is the same as the input path') return 'File name is the same as the input path';
+    if (key === 'File name ends with a whitespace character or a dot, which is not allowed.') return 'File name ends with a whitespace character or a dot, which is not allowed.';
+    if (key === 'File will have a too long path') return 'File will have a too long path';
+    return key;
+  },
+};
+
+vi.mock('i18next', () => ({
+  default: mockI18n,
+}));
+
 vi.mock('../util', () => ({
   isWindows: true,
   isMac: false,
+  hasDuplicates: vi.fn(),
+  filenamify: vi.fn(),
+  getOutFileExtension: vi.fn(),
 }));
 
 vi.mock('../isDev', () => ({
   default: false,
 }));
 
-vi.mock('i18next', () => ({
-  default: {
-    t: (key: string, options?: Record<string, unknown>) => {
-      if (key === 'File name is empty') return 'File name is empty';
-      if (key === 'File name contains invalid character(s): {{invalidChars}}') {
-        return `File name contains invalid character(s): ${options?.invalidChars}`;
-      }
-      if (key === 'Duplicate file name with segment(s): {{segmentNumbers}}') {
-        return `Duplicate file name with segment(s): ${options?.segmentNumbers}`;
-      }
-      if (key === 'File name is the same as the input path') return 'File name is the same as the input path';
-      if (key === 'File name ends with a whitespace character or a dot, which is not allowed.') return 'File name ends with a whitespace character or a dot, which is not allowed.';
-      if (key === 'File will have a too long path') return 'File will have a too long path';
-      return key;
-    },
-  },
-}));
-
-const mockBasename = vi.fn((path: string) => {
-  const parts = path.split(/[/\\]/);
-  return parts[parts.length - 1] || '';
-});
-
-const mockNormalize = vi.fn((path: string) => path);
-const mockJoin = vi.fn((...paths: string[]) => paths.join('\\'));
-
-vi.mock('node:path', () => ({
-  parse: vi.fn(),
-  sep: '\\',
-  join: mockJoin,
-  normalize: mockNormalize,
-  basename: mockBasename,
-}));
-
 describe('getDetailedTemplateProblems', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockBasename.mockImplementation((path: string) => {
+    
+    mockPath.join.mockImplementation((...paths: string[]) => paths.join('\\'));
+    mockPath.normalize.mockImplementation((path: string) => path);
+    mockPath.basename.mockImplementation((path: string) => {
       const parts = path.split(/[/\\]/);
       return parts[parts.length - 1] || '';
     });
-    mockNormalize.mockImplementation((path: string) => path);
-    mockJoin.mockImplementation((...paths: string[]) => paths.join('\\'));
+
+    vi.stubGlobal('window', {
+      require: (moduleName: string) => {
+        if (moduleName === 'path') return mockPath;
+        return {};
+      },
+    });
   });
 
   test('should detect empty file names', async () => {
@@ -93,8 +101,7 @@ describe('getDetailedTemplateProblems', () => {
   test('should detect invalid characters in file names', async () => {
     const { getDetailedTemplateProblems } = await import('./outputNameTemplate');
 
-    mockBasename.mockReturnValue('input.mp4');
-    mockNormalize.mockImplementation((path: string) => path);
+    mockPath.basename.mockReturnValue('input.mp4');
 
     const result = getDetailedTemplateProblems({
       fileNames: ['valid.mp4', 'file:name.mp4', 'another.mp4'],
@@ -111,7 +118,7 @@ describe('getDetailedTemplateProblems', () => {
   test('should return no problems for valid file names', async () => {
     const { getDetailedTemplateProblems } = await import('./outputNameTemplate');
 
-    mockBasename.mockReturnValue('input.mp4');
+    mockPath.basename.mockReturnValue('input.mp4');
 
     const result = getDetailedTemplateProblems({
       fileNames: ['segment1.mp4', 'segment2.mp4', 'segment3.mp4'],
@@ -127,7 +134,7 @@ describe('getDetailedTemplateProblems', () => {
   test('should detect file name ending with space', async () => {
     const { getDetailedTemplateProblems } = await import('./outputNameTemplate');
 
-    mockBasename.mockReturnValue('input.mp4');
+    mockPath.basename.mockReturnValue('input.mp4');
 
     const result = getDetailedTemplateProblems({
       fileNames: ['valid.mp4', 'file name .mp4'],
@@ -143,7 +150,7 @@ describe('getDetailedTemplateProblems', () => {
   test('should detect file name ending with dot', async () => {
     const { getDetailedTemplateProblems } = await import('./outputNameTemplate');
 
-    mockBasename.mockReturnValue('input.mp4');
+    mockPath.basename.mockReturnValue('input.mp4');
 
     const result = getDetailedTemplateProblems({
       fileNames: ['valid.mp4', 'file name.'],
