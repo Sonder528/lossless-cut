@@ -1092,6 +1092,7 @@
   "Language": "语言",
   "The output location has no storage space remaining. Please free up some space and try again.": "输出位置没有剩余存储空间。请释放一些空间后再试。",
   "Ask": "询问",
+<<<<<<< Updated upstream
   "File name is empty": "文件名是空的",
   "File name contains invalid character(s): {{invalidChars}}": "文件名包含无效字符：{{invalidChars}}",
   "File name is the same as the input path": "文件名与输入路径相同",
@@ -1110,6 +1111,8 @@
   "Locate": "定位",
   "Jump to segment": "跳转到片段",
   "Continue anyway": "继续导出",
+=======
+>>>>>>> Stashed changes
   "Empty file name": "空文件名",
   "Invalid characters": "无效字符",
   "Duplicate file name": "重复文件名",
@@ -1118,6 +1121,26 @@
   "Path too long": "路径过长",
   "Unknown problem": "未知问题",
   "Segment": "片段",
+<<<<<<< Updated upstream
   "Invalid characters found:": "找到无效字符：",
   "Duplicates with segment(s):": "与片段重复："
+=======
+  "Invalid characters found:": "发现无效字符：",
+  "Duplicates with segment(s):": "与以下片段重复：",
+  "Jump to segment": "跳转到片段",
+  "Locate": "定位",
+  "File name problems detected": "检测到文件名问题",
+  "{{count}} problem(s) found with the output file names": "在输出文件名中发现 {{count}} 个问题",
+  "{{count}} empty": "{{count}} 个空文件名",
+  "{{count}} with invalid chars": "{{count}} 个包含无效字符",
+  "{{count}} duplicates": "{{count}} 个重复",
+  "{{count}} with invalid ending": "{{count}} 个结尾无效",
+  "{{count}} with long path": "{{count}} 个路径过长",
+  "{{count}} same as input": "{{count}} 个与输入相同",
+  "Please fix these issues before exporting. Click \"Locate\" to jump to the corresponding segment.": "请在导出前修复这些问题。点击\"定位\"跳转到对应的片段。",
+  "Continue anyway": "仍要继续",
+  "File name is empty": "文件名为空",
+  "File name contains invalid character(s): {{invalidChars}}": "文件名包含无效字符：{{invalidChars}}",
+  "Duplicate file name with segment(s): {{segmentNumbers}}": "与片段 {{segmentNumbers}} 重复"
+>>>>>>> Stashed changes
 }
